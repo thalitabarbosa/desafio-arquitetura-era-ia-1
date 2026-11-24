@@ -53,8 +53,7 @@ services:
 
   app:
     build: ./app
-    # Piloto: as features ainda não migradas leem as chaves dos providers do .env.
-    env_file: .env
+    # Sem env_file: a aplicação recebe só o endereço e a chave virtual do gateway.
     environment:
       GATEWAY_BASE_URL: http://gateway:4000/v1
       GATEWAY_API_KEY: ${HELPDESK_GATEWAY_KEY}
@@ -66,7 +65,5 @@ services:
       timeout: 3s
       retries: 20
     depends_on:
-      provider-fake:
-        condition: service_healthy
       gateway:
         condition: service_healthy

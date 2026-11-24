@@ -180,10 +180,10 @@ def write_svg(rows: list[dict], title: str, path: pathlib.Path) -> None:
         parts.append(f'<circle cx="{x(i)}" cy="{y(a)}" r="5" fill="{color}"/>')
         # empilha rótulos de pontos próximos para não se sobreporem, com uma linha guia
         label_y = y(a) - 14
-        while any(abs(label_y - py) < 15 and abs(x(i) - px) < 170 for px, py in placed):
+        while any(abs(label_y - py) < 15 and abs(x(i) - px) < 230 for px, py in placed):
             label_y -= 16
         placed.append((x(i), label_y))
-        anchor = "end" if i > 0.6 else "start"
+        anchor = "end" if i > 0.9 else "start"
         label_x = x(i) - 4 if anchor == "end" else x(i) + 4
         parts.append(f'<line x1="{x(i)}" y1="{y(a)}" x2="{label_x}" y2="{label_y + 3}" '
                      f'stroke="{color}" stroke-width="0.6"/>')

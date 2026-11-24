@@ -81,3 +81,47 @@ O que a medição mostrou:
 2. Nenhum componente na zona de dor, exceto `schemas` e `errors` (declarados no ADR 0009). Features e `adapters.gateway` não podem ser exceção.
 3. Features importam só `ports`, `schemas` e `errors`; `adapters.gateway` é o único componente que importa o SDK, e só `main` o importa.
 4. `grep` de modelos físicos e chaves de provider em `app/` vazio; o serviço `app` não recebe `env_file: .env`.
+
+## Execução da refatoração com agente (até a tag `v2-decoupled`)
+
+### Handoff
+
+- **Agente:** Claude (Anthropic), numa sessão do Claude Code com acesso ao repositório, ao script de métrica e à suíte.
+- **O que foi entregue ao agente:** este plano (estratégias e critério de pronto), a medição da `v1-coupled`, a suíte `tests/characterization/` como contrato imutável e quatro regras explícitas:
+  1. não alterar `tests/characterization/` (o `git diff v1-coupled -- tests/characterization` precisa ficar vazio);
+  2. features importam só `ports`, `schemas` e `errors`; só `main` importa `adapters.*`;
+  3. um modelo `large` por capacidade na `v2-decoupled` (um `mini` muda as saídas fixadas pela suíte);
+  4. comportamento externo idêntico: mesmas rotas, respostas síncronas, mesmos status de erro (422 do período, 502 de saída fora do contrato).
+- **Passos pedidos ao agente, um por vez, cada um seguido de medição:** piloto (`classification`), leitura da medição e revisão do plano, depois `extraction`, `suggestion`, `report` + `tickets` (vira `adapters/ticket_file.py`) e por fim remoção de `llm.py` e `config.py`.
+
+### Como a métrica e os testes decidiram o que entrava
+
+| proposta do agente | juiz | decisão |
+|---|---|---|
+| `ports.py` com Protocols e exceções juntos (piloto) | métrica: `ports` com A = 0,33, I = 0, D = 0,67 | **rejeitada** → revisão 1 (`errors.py` separado) |
+| manter `config.py` com Ca reduzido | métrica: folha concreta continua com D = 1 | **rejeitada** → revisão 2 (configuração lida em `main.py`) |
+| adaptadores herdando explicitamente dos Protocols | régua: herdar de um Protocol pode ser lido como "classe abstrata" e distorcer A do adaptador | **rejeitada**: conformidade estrutural (duck typing), sem herança |
+| `report` em lotes paralelos já na `v2` | regra 4: muda o perfil de chamadas e o tempo de resposta; é decisão de execução (requisito 6) | **adiada** para a `main` (ADR 0004) |
+| erros de domínio traduzidos em `main.py` com `add_exception_handler` | suíte: corpo `{"detail": "A data inicial é posterior à data final"}` e status 422/502 preservados | **aceita** |
+| `grep` de modelos físicos e chaves em `app/` | critério 4 | **aceito** (saída vazia) |
+
+O gate final antes da tag é a suíte inteira contra o compose (`python3 -m unittest discover -s tests/characterization -v`), com o gateway mapeando cada capacidade para o mesmo `large` da v1.
+
+### Medição da `v2-decoupled`
+
+[CSV](../metrics/results/v2-decoupled.csv), [gráfico](../metrics/results/v2-decoupled.svg).
+
+| componente | Ca | Ce | I | A | D |
+|---|---|---|---|---|---|
+| adapters.gateway | 1 | 1 | 0,50 | 0,00 | 0,50 |
+| adapters.ticket_file | 1 | 1 | 0,50 | 0,00 | 0,50 |
+| classification | 1 | 3 | 0,75 | 0,00 | 0,25 |
+| errors | 6 | 0 | 0,00 | 0,00 | 1,00 (estável por natureza, ADR 0009) |
+| extraction | 1 | 3 | 0,75 | 0,00 | 0,25 |
+| main | 0 | 8 | 1,00 | 0,00 | 0,00 |
+| ports | 4 | 0 | 0,00 | 1,00 | 0,00 |
+| report | 1 | 3 | 0,75 | 0,00 | 0,25 |
+| schemas | 5 | 0 | 0,00 | 0,00 | 1,00 (estável por natureza, ADR 0009) |
+| suggestion | 1 | 2 | 0,67 | 0,00 | 0,33 |
+
+Critério de pronto: (2) só `schemas` e `errors` na zona de dor, ambos declarados; (3) features importam só `ports`, `schemas`, `errors`, e `adapters.gateway` (único com `import openai`) só é importado por `main`; (4) `grep` vazio e o serviço `app` sem `env_file`.

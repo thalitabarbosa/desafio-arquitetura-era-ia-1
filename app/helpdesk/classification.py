@@ -1,6 +1,7 @@
 import json
 
-from .ports import InvalidModelOutput, LanguageModel
+from .errors import InvalidModelOutput
+from .ports import LanguageModel
 from .schemas import Classification, TicketInput
 
 CATEGORIES = {"delivery", "payment", "exchange_return", "product_defect", "other"}
@@ -20,4 +21,4 @@ class Classifier:
             raise InvalidModelOutput("Classificação não veio em JSON") from err
         if data.get("category") not in CATEGORIES or data.get("priority") not in PRIORITIES:
             raise InvalidModelOutput("Classificação fora dos valores permitidos")
-        return Classification(ticket_id=ticket.ticket_id, **data)
+        return Classification(ticket_id=ticket.ticket_id, category=data["category"], priority=data["priority"])

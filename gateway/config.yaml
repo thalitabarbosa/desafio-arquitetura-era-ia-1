@@ -1,6 +1,7 @@
 # Configuração do AI Gateway (LiteLLM Proxy).
 # A aplicação só conhece os nomes lógicos (model_name). O modelo físico, o provider,
-# a credencial e o preço de cada um ficam aqui.
+# a credencial e o preço de cada um ficam aqui (ADR 0003). Preços do provider-fake,
+# em US$ por token (tabela de Modelos de provider-fake/README.md).
 
 model_list:
   - model_name: helpdesk-classify
@@ -10,6 +11,30 @@ model_list:
       api_key: os.environ/FAKE_OPENAI_KEY
       input_cost_per_token: 0.0000025
       output_cost_per_token: 0.00001
+
+  - model_name: helpdesk-extract
+    litellm_params:
+      model: openai/gpt-fake-large
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.00001
+
+  - model_name: helpdesk-suggest
+    litellm_params:
+      model: anthropic/claude-fake-large
+      api_base: http://provider-fake:8090/anthropic
+      api_key: os.environ/FAKE_ANTHROPIC_KEY
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+
+  - model_name: helpdesk-topics
+    litellm_params:
+      model: anthropic/claude-fake-large
+      api_base: http://provider-fake:8090/anthropic
+      api_key: os.environ/FAKE_ANTHROPIC_KEY
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
