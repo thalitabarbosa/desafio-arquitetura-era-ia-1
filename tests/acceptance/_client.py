@@ -28,7 +28,7 @@ def call(method: str, base: str, path: str, payload=None, timeout: float = 120):
     data = resp.read()
     elapsed = time.monotonic() - start
     conn.close()
-    return resp.status, dict(resp.getheaders()), data, elapsed
+    return resp.status, resp.headers, data, elapsed  # headers sem diferenciar maiúsculas
 
 
 def app_post(path: str, payload, timeout: float = 120):
@@ -45,7 +45,7 @@ def stream_post(path: str, payload, timeout: float = 120) -> dict:
     start = time.monotonic()
     conn.request("POST", prefix + path, body=json.dumps(payload), headers={"Content-Type": "application/json"})
     resp = conn.getresponse()
-    result = {"status": resp.status, "headers": dict(resp.getheaders()), "events": [], "first_chunk_s": None}
+    result = {"status": resp.status, "headers": resp.headers, "events": [], "first_chunk_s": None}
     if not result["headers"].get("Content-Type", "").startswith("text/event-stream"):
         result["body"] = resp.read()
         result["total_s"] = time.monotonic() - start
