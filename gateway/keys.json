@@ -1,0 +1,8 @@
+[
+  {
+    "key_env": "HELPDESK_GATEWAY_KEY",
+    "key_alias": "helpdesk-app",
+    "description": "Chave usada pelo serviço app. Só enxerga as capacidades do helpdesk.",
+    "models": ["helpdesk-classify"]
+  }
+]

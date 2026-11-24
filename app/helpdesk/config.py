@@ -6,8 +6,7 @@ ANTHROPIC_API_KEY = os.environ["FAKE_ANTHROPIC_KEY"]
 OPENAI_BASE_URL = "http://provider-fake:8090/openai/v1"
 ANTHROPIC_BASE_URL = "http://provider-fake:8090/anthropic"
 
-# A classificação e a extração rodam na OpenAI; a sugestão e o relatório, na Anthropic.
-CLASSIFICATION_MODEL = "gpt-fake-large"
+# A extração roda na OpenAI; a sugestão e o relatório, na Anthropic. (A classificação já vai pelo gateway.)
 EXTRACTION_MODEL = "gpt-fake-large"
 SUGGESTION_MODEL = "claude-fake-large"
 REPORT_MODEL = "claude-fake-large"

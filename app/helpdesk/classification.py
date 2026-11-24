@@ -1,15 +1,23 @@
-from fastapi import HTTPException
+import json
 
-from . import config, llm
+from .ports import InvalidModelOutput, LanguageModel
 from .schemas import Classification, TicketInput
 
 CATEGORIES = {"delivery", "payment", "exchange_return", "product_defect", "other"}
 PRIORITIES = {"low", "medium", "high"}
 
 
-def classify(ticket: TicketInput) -> Classification:
-    text = llm.call_openai(config.CLASSIFICATION_MODEL, "classify", ticket.text)
-    data = llm.parse_json(text)
-    if data.get("category") not in CATEGORIES or data.get("priority") not in PRIORITIES:
-        raise HTTPException(status_code=502, detail="Classificação fora dos valores permitidos")
-    return Classification(ticket_id=ticket.ticket_id, **data)
+class Classifier:
+    def __init__(self, model: LanguageModel, capability: str):
+        self._model = model
+        self._capability = capability
+
+    async def classify(self, ticket: TicketInput) -> Classification:
+        text = await self._model.complete(self._capability, f"TASK: classify\n{ticket.text}")
+        try:
+            data = json.loads(text)
+        except ValueError as err:
+            raise InvalidModelOutput("Classificação não veio em JSON") from err
+        if data.get("category") not in CATEGORIES or data.get("priority") not in PRIORITIES:
+            raise InvalidModelOutput("Classificação fora dos valores permitidos")
+        return Classification(ticket_id=ticket.ticket_id, **data)

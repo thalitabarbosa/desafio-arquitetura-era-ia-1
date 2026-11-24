@@ -1,10 +1,19 @@
-from fastapi import FastAPI
+import os
 
-from . import classification, extraction, report, suggestion
+from fastapi import FastAPI, HTTPException
+
+from . import extraction, report, suggestion
+from .adapters.gateway import GatewayLanguageModel
+from .classification import Classifier
+from .ports import InvalidModelOutput, ModelUnavailable
 from .schemas import (Classification, OrderData, PeriodInput, ReplySuggestion, TicketInput,
                       TopicsReport)
 
 app = FastAPI(title="Helpdesk")
+
+# Piloto: só a classificação passa pelo gateway.
+gateway = GatewayLanguageModel(base_url=os.environ["GATEWAY_BASE_URL"], api_key=os.environ["GATEWAY_API_KEY"])
+classifier = Classifier(gateway, os.environ.get("CAPABILITY_CLASSIFY", "helpdesk-classify"))
 
 
 @app.get("/health")
@@ -13,8 +22,13 @@ def health():
 
 
 @app.post("/tickets/classification")
-def classify_ticket(ticket: TicketInput) -> Classification:
-    return classification.classify(ticket)
+async def classify_ticket(ticket: TicketInput) -> Classification:
+    try:
+        return await classifier.classify(ticket)
+    except InvalidModelOutput as err:
+        raise HTTPException(status_code=502, detail=str(err))
+    except ModelUnavailable as err:
+        raise HTTPException(status_code=503, detail=str(err))
 
 
 @app.post("/tickets/reply-suggestion")
