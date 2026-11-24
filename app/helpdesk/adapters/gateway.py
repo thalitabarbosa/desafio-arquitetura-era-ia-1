@@ -7,7 +7,6 @@ Aqui mora só o prazo que cada feature aceita esperar (ADR 0004).
 import asyncio
 from collections.abc import AsyncIterator
 
-import httpx
 import openai
 from openai import AsyncOpenAI
 
@@ -18,8 +17,7 @@ class GatewayLanguageModel:
     def __init__(self, base_url: str, api_key: str, read_timeout: float):
         # Sem retries no SDK: retry mora em um lugar só, o gateway (retries em camadas se multiplicam).
         # read_timeout limita o silêncio entre dois trechos de um stream.
-        self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, max_retries=0,
-                                   timeout=httpx.Timeout(read_timeout, connect=3.0))
+        self._client = AsyncOpenAI(base_url=base_url, api_key=api_key, max_retries=0, timeout=read_timeout)
 
     async def complete(self, capability: str, prompt: str, *, deadline: float,
                        max_tokens: int | None = None) -> str:
@@ -30,7 +28,7 @@ class GatewayLanguageModel:
                     timeout=deadline, **_max_tokens(max_tokens))
         except TimeoutError as err:
             raise ModelUnavailable(f"'{capability}' não respondeu em {deadline:g} s") from err
-        except (openai.APIError, httpx.HTTPError) as err:
+        except openai.APIError as err:
             raise translate(capability, err) from err
         return response.choices[0].message.content or ""
 
@@ -45,7 +43,7 @@ class GatewayLanguageModel:
                 first = await anext(chunks, None)
         except TimeoutError as err:
             raise ModelUnavailable(f"'{capability}' não começou a responder em {deadline:g} s") from err
-        except (openai.APIError, httpx.HTTPError) as err:
+        except openai.APIError as err:
             raise translate(capability, err) from err
         if first is None:
             return
@@ -53,7 +51,7 @@ class GatewayLanguageModel:
         try:
             async for text in chunks:
                 yield text
-        except (openai.APIError, httpx.HTTPError) as err:
+        except Exception as err:  # erro do gateway no meio do stream ou conexão perdida
             raise ModelUnavailable(f"'{capability}' interrompeu a geração: {err}") from err
         finally:
             await response.close()
