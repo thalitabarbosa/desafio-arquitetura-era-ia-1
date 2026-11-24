@@ -2,12 +2,29 @@
   {
     "key_env": "HELPDESK_GATEWAY_KEY",
     "key_alias": "helpdesk-app",
-    "description": "Chave usada pelo serviço app. Só enxerga as capacidades do helpdesk.",
+    "description": "Chave do serviço app. Só enxerga as capacidades do helpdesk (e os destinos internos de fallback delas). Orçamento mensal e limite de requisições de produção (ADRs 0001 e 0006).",
     "models": [
-      "helpdesk-classify",
-      "helpdesk-suggest",
-      "helpdesk-extract",
-      "helpdesk-topics"
-    ]
+      "helpdesk-classify", "helpdesk-classify-fallback", "helpdesk-classify-weak",
+      "helpdesk-suggest", "helpdesk-suggest-fallback", "helpdesk-suggest-weak",
+      "helpdesk-topics", "helpdesk-topics-fallback", "helpdesk-topics-weak",
+      "helpdesk-extract", "helpdesk-extract-fallback"
+    ],
+    "max_budget": 50.0,
+    "budget_duration": "30d",
+    "rpm_limit": 600
+  },
+  {
+    "key_env": "GOVERNANCE_BUDGET_KEY",
+    "key_alias": "governance-budget-demo",
+    "description": "Chave do roteiro de governança: orçamento de US$ 0,0001. A primeira classificação (~US$ 0,00014) consome o orçamento; a seguinte é recusada pelo gateway.",
+    "models": ["helpdesk-classify"],
+    "max_budget": 0.0001
+  },
+  {
+    "key_env": "GOVERNANCE_RPM_KEY",
+    "key_alias": "governance-rpm-demo",
+    "description": "Chave do roteiro de governança: 2 requisições por minuto. A terceira no mesmo minuto é recusada pelo gateway.",
+    "models": ["helpdesk-classify"],
+    "rpm_limit": 2
   }
 ]

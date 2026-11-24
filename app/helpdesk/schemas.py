@@ -41,3 +41,14 @@ class TopicsReport(BaseModel):
     end: date
     total_tickets: int
     topics: list[Topic]
+
+
+class ReportAccepted(BaseModel):
+    job_id: str
+    state: str
+
+
+class ReportStatus(BaseModel):
+    state: str  # pending | running | failed (done vira 303 para o resultado)
+    progress: str | None = None
+    reason: str | None = None

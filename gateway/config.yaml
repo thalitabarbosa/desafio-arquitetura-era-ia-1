@@ -1,40 +1,132 @@
-# Configuração do AI Gateway (LiteLLM Proxy).
-# A aplicação só conhece os nomes lógicos (model_name). O modelo físico, o provider,
-# a credencial e o preço de cada um ficam aqui (ADR 0003). Preços do provider-fake,
-# em US$ por token (tabela de Modelos de provider-fake/README.md).
+# Configuração do AI Gateway (LiteLLM Proxy). ADRs 0002, 0003, 0006 e 0007.
+#
+# A aplicação só conhece as capacidades lógicas: helpdesk-classify, helpdesk-suggest,
+# helpdesk-topics e helpdesk-extract. Para trocar o modelo físico de uma capacidade, altere
+# o campo `model` (e o preço) do bloco dela e rode `docker compose restart gateway`.
+#
+# Cada capacidade tem até três destinos, encadeados em router_settings.fallbacks:
+#   <capacidade>           primário (modelo large)
+#   <capacidade>-fallback  fallback técnico: o large equivalente no outro provider
+#   <capacidade>-weak      fallback com modelo fraco (mini), só onde o ADR 0007 aceita
+# Os destinos -fallback/-weak são internos do gateway; a aplicação nunca os chama pelo nome.
+#
+# Preços do provider-fake em US$ por token (provider-fake/README.md). Sem eles o gateway
+# calcula custo zero e nenhum orçamento estoura.
 
 model_list:
+
+  # F1 Classificar ticket. Timeout de 3 s por tentativa (resposta normal: ~1,1 s).
   - model_name: helpdesk-classify
     litellm_params:
       model: openai/gpt-fake-large
       api_base: http://provider-fake:8090/openai/v1
       api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 3
       input_cost_per_token: 0.0000025
       output_cost_per_token: 0.00001
-
-  - model_name: helpdesk-extract
+  - model_name: helpdesk-classify-fallback
     litellm_params:
-      model: openai/gpt-fake-large
+      model: anthropic/claude-fake-large
+      api_base: http://provider-fake:8090/anthropic
+      api_key: os.environ/FAKE_ANTHROPIC_KEY
+      timeout: 3
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+  - model_name: helpdesk-classify-weak
+    litellm_params:
+      model: openai/gpt-fake-mini
       api_base: http://provider-fake:8090/openai/v1
       api_key: os.environ/FAKE_OPENAI_KEY
-      input_cost_per_token: 0.0000025
-      output_cost_per_token: 0.00001
+      timeout: 3
+      input_cost_per_token: 0.00000015
+      output_cost_per_token: 0.0000006
 
+  # F2 Sugerir resposta (streaming). Timeout de 5 s sem receber trecho.
   - model_name: helpdesk-suggest
     litellm_params:
       model: anthropic/claude-fake-large
       api_base: http://provider-fake:8090/anthropic
       api_key: os.environ/FAKE_ANTHROPIC_KEY
+      timeout: 5
+      stream_timeout: 5
       input_cost_per_token: 0.000003
       output_cost_per_token: 0.000015
+  - model_name: helpdesk-suggest-fallback
+    litellm_params:
+      model: openai/gpt-fake-large
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 5
+      stream_timeout: 5
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.00001
+  - model_name: helpdesk-suggest-weak
+    litellm_params:
+      model: openai/gpt-fake-mini
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 5
+      stream_timeout: 5
+      input_cost_per_token: 0.00000015
+      output_cost_per_token: 0.0000006
 
+  # F3 Relatório de temas (assíncrono). Timeout de 15 s por lote (resposta normal: ~10 s).
   - model_name: helpdesk-topics
     litellm_params:
       model: anthropic/claude-fake-large
       api_base: http://provider-fake:8090/anthropic
       api_key: os.environ/FAKE_ANTHROPIC_KEY
+      timeout: 15
       input_cost_per_token: 0.000003
       output_cost_per_token: 0.000015
+  - model_name: helpdesk-topics-fallback
+    litellm_params:
+      model: openai/gpt-fake-large
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 15
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.00001
+  - model_name: helpdesk-topics-weak
+    litellm_params:
+      model: openai/gpt-fake-mini
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 15
+      input_cost_per_token: 0.00000015
+      output_cost_per_token: 0.0000006
+
+  # F4 Extrair dados do pedido. Sem modelo fraco: a automação não tem revisão humana (ADR 0007).
+  - model_name: helpdesk-extract
+    litellm_params:
+      model: openai/gpt-fake-large
+      api_base: http://provider-fake:8090/openai/v1
+      api_key: os.environ/FAKE_OPENAI_KEY
+      timeout: 3
+      input_cost_per_token: 0.0000025
+      output_cost_per_token: 0.00001
+  - model_name: helpdesk-extract-fallback
+    litellm_params:
+      model: anthropic/claude-fake-large
+      api_base: http://provider-fake:8090/anthropic
+      api_key: os.environ/FAKE_ANTHROPIC_KEY
+      timeout: 3
+      input_cost_per_token: 0.000003
+      output_cost_per_token: 0.000015
+
+router_settings:
+  # 1 retry => no máximo 2 tentativas em cada destino (primário, fallback técnico, modelo fraco).
+  # Backoff exponencial do LiteLLM: 0,5 s + jitter até 0,75 s; em 429 respeita o Retry-After.
+  num_retries: 1
+  retry_after: 0
+  # Sem cooldown (circuit breaker fora do escopo): toda requisição segue a mesma sequência de
+  # tentativas, e o /admin/calls mostra exatamente o que o README declara.
+  disable_cooldowns: true
+  fallbacks:
+    - helpdesk-classify: [helpdesk-classify-fallback, helpdesk-classify-weak]
+    - helpdesk-suggest: [helpdesk-suggest-fallback, helpdesk-suggest-weak]
+    - helpdesk-topics: [helpdesk-topics-fallback, helpdesk-topics-weak]
+    - helpdesk-extract: [helpdesk-extract-fallback]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -40,6 +40,39 @@ def post(path: str, payload, timeout: float = 60) -> Response:
     return request("POST", f"{BASE_URL}{path}", payload, timeout)
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+_no_redirect = urllib.request.build_opener(_NoRedirect)
+
+
+def get(path: str, timeout: float = 30) -> Response:
+    """GET sem seguir redirecionamentos (para ver o 303 da URL de status)."""
+    try:
+        with _no_redirect.open(f"{BASE_URL}{path}", timeout=timeout) as resp:
+            return Response(resp.status, resp.headers, resp.read())
+    except urllib.error.HTTPError as err:
+        return Response(err.code, err.headers, err.read())
+
+
+def sse_events(body: bytes) -> list[tuple[str, dict]]:
+    """Converte um corpo text/event-stream em [(evento, dados)]; evento padrão = "message"."""
+    events = []
+    for block in body.decode("utf-8").split("\n\n"):
+        if not block.strip():
+            continue
+        name, data = "message", None
+        for line in block.split("\n"):
+            if line.startswith("event:"):
+                name = line[6:].strip()
+            elif line.startswith("data:"):
+                data = json.loads(line[5:].strip())
+        events.append((name, data))
+    return events
+
+
 def reset_provider() -> None:
     request("POST", f"{PROVIDER_URL}/admin/reset")
 

@@ -9,12 +9,16 @@ PRIORITIES = {"low", "medium", "high"}
 
 
 class Classifier:
-    def __init__(self, model: LanguageModel, capability: str):
+    """F1, síncrona: o cliente espera a confirmação na tela (ADR 0004)."""
+
+    def __init__(self, model: LanguageModel, capability: str, deadline: float):
         self._model = model
         self._capability = capability
+        self._deadline = deadline
 
     async def classify(self, ticket: TicketInput) -> Classification:
-        text = await self._model.complete(self._capability, f"TASK: classify\n{ticket.text}")
+        text = await self._model.complete(self._capability, f"TASK: classify\n{ticket.text}",
+                                          deadline=self._deadline)
         try:
             data = json.loads(text)
         except ValueError as err:
