@@ -39,3 +39,45 @@ O problema não é o número em si: é *quem* está na zona de dor. `config` e `
 ## Piloto
 
 Componente do piloto: **`classification`** (a feature mais simples, saída curta e determinística, coberta por 5 casos da suíte). O piloto cria `ports.py`, `adapters/gateway.py` e o serviço `gateway` (LiteLLM) com a capacidade lógica `helpdesk-classify`; as outras features continuam no caminho antigo até a medição do piloto ser lida.
+
+### Medição antes e depois do piloto
+
+Antes = `v1-coupled`. Depois = commit do piloto (`Piloto: classificação pelo AI Gateway`), medido com o mesmo script sobre `app/helpdesk`.
+
+| componente | antes (Ca, Ce, I, A, D) | depois (Ca, Ce, I, A, D) |
+|---|---|---|
+| classification | 1, 3, 0,75, 0,00, 0,25 | 1, 2, 0,67, 0,00, 0,33 |
+| llm | 4, 1, 0,20, 0,00, 0,80 | 3, 1, 0,25, 0,00, 0,75 |
+| config | 6, 0, 0,00, 0,00, 1,00 | 5, 0, 0,00, 0,00, 1,00 |
+| ports (novo) | — | 3, 0, 0,00, 0,33, **0,67** (zona de dor) |
+| adapters.gateway (novo) | — | 1, 1, 0,50, 0,00, 0,50 |
+| main | 0, 5, 1,00, 0,00, 0,00 | 0, 7, 1,00, 0,00, 0,00 |
+
+Suíte de caracterização: os 5 casos de classificação continuam com o mesmo corpo de resposta (o `large` atrás de `helpdesk-classify` é o mesmo `gpt-fake-large`).
+
+O que a medição mostrou:
+
+1. **`ports` nasceu na zona de dor.** O plano pôs os erros de domínio (`ModelUnavailable`, `InvalidModelOutput`) junto do contrato. Duas classes concretas e um Protocol dão A = 0,33; como `ports` é estável (I = 0), D = 0,67. A métrica apontou um problema real de desenho: o módulo de contratos estava misturando contrato com tipos concretos.
+2. **O D da feature piorou um pouco (0,25 → 0,33), e está certo.** A classificação passou a depender de menos coisas (Ce 3 → 2), então ficou um pouco mais estável sem ficar mais abstrata. O ganho do piloto não aparece no D da feature, e sim em *quem* ela importa: antes, `config` e `llm` (voláteis e concretos); depois, `ports` (abstrato) e `schemas` (tipos de valor). O critério de pronto não vai exigir D baixo nas features; vai exigir que elas fiquem fora da zona de dor e dependam só de abstrações e tipos de valor.
+3. **Reduzir o Ca de `config` não tira `config` da zona de dor.** Um módulo folha e concreto tem I = 0 e A = 0 com Ca = 6 ou com Ca = 1. Injetar valores pelas features só desloca o problema.
+
+## Revisões do plano
+
+### Revisão 1 (depois do piloto): erros de domínio fora de `ports`
+
+- **Antes:** `ports.py` com os Protocols e as exceções de domínio.
+- **Depois:** `ports.py` só com Protocols (A = 1, sobre a Main Sequence). As exceções vão para `errors.py`, um módulo de tipos de domínio que quase nunca muda, como `schemas.py`; os dois são declarados estáveis por natureza no ADR da métrica (0009).
+- **Por quê:** item 1 da medição. Separar contrato de tipo concreto é melhor estrutura mesmo sem a métrica: os adaptadores precisam lançar os erros sem depender do contrato que implementam.
+
+### Revisão 2 (depois do piloto): `config` deixa de existir
+
+- **Antes:** reduzir o Ca de `config` injetando valores nas features.
+- **Depois:** o que sobra de configuração da aplicação (URL e chave do gateway, nomes lógicos das capacidades, tamanho do lote, timeouts) é lido do ambiente no ponto de composição (`main.py`) e passado pelo construtor. Chaves dos providers, base URLs dos providers e nomes físicos de modelo saem da aplicação e vão para `gateway/config.yaml`.
+- **Por quê:** item 3 da medição. Com o gateway, `config` perde quase todo o conteúdo; um módulo só para meia dúzia de variáveis de ambiente lidas uma vez na composição não paga a dependência.
+
+### Critério de pronto revisado
+
+1. Suíte de caracterização passa sem alteração.
+2. Nenhum componente na zona de dor, exceto `schemas` e `errors` (declarados no ADR 0009). Features e `adapters.gateway` não podem ser exceção.
+3. Features importam só `ports`, `schemas` e `errors`; `adapters.gateway` é o único componente que importa o SDK, e só `main` o importa.
+4. `grep` de modelos físicos e chaves de provider em `app/` vazio; o serviço `app` não recebe `env_file: .env`.
