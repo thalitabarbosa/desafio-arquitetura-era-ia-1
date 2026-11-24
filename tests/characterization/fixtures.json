@@ -1,0 +1,265 @@
+{
+  "classification": [
+    {
+      "request": {
+        "ticket_id": "TK-00042",
+        "text": "Meu pedido #481516 não chegou e já passou do prazo, urgente"
+      },
+      "response": {
+        "ticket_id": "TK-00042",
+        "category": "delivery",
+        "priority": "high"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90001",
+        "text": "Fui cobrado duas vezes no cartão pela mesma compra"
+      },
+      "response": {
+        "ticket_id": "TK-90001",
+        "category": "payment",
+        "priority": "high"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90002",
+        "text": "Gostaria de saber como faço para trocar o tamanho da calça jeans"
+      },
+      "response": {
+        "ticket_id": "TK-90002",
+        "category": "exchange_return",
+        "priority": "low"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90003",
+        "text": "O liquidificador chegou quebrado, pedido #605065"
+      },
+      "response": {
+        "ticket_id": "TK-90003",
+        "category": "product_defect",
+        "priority": "medium"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90004",
+        "text": "Esqueci a senha da minha conta e não consigo entrar"
+      },
+      "response": {
+        "ticket_id": "TK-90004",
+        "category": "other",
+        "priority": "medium"
+      }
+    }
+  ],
+  "extraction": [
+    {
+      "request": {
+        "ticket_id": "TK-00002",
+        "text": "Tenho aqui a nota fiscal 530720. O produto veio quebrado na caixa, pedido #605065. Sou cliente da loja há bastante tempo. Fico no aguardo de uma solução."
+      },
+      "response": {
+        "ticket_id": "TK-00002",
+        "order_number": "#605065",
+        "product": null
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90005",
+        "text": "Quero devolver o pedido nº 112233, a air fryer não liga"
+      },
+      "response": {
+        "ticket_id": "TK-90005",
+        "order_number": "#112233",
+        "product": "air fryer"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90006",
+        "text": "Comprei um smartwatch mas ainda não recebi o código de rastreio"
+      },
+      "response": {
+        "ticket_id": "TK-90006",
+        "order_number": null,
+        "product": "smartwatch"
+      }
+    },
+    {
+      "request": {
+        "ticket_id": "TK-90007",
+        "text": "Esqueci a senha da minha conta e não consigo entrar"
+      },
+      "response": {
+        "ticket_id": "TK-90007",
+        "order_number": null,
+        "product": null
+      }
+    }
+  ],
+  "suggestion": [
+    {
+      "request": {
+        "ticket_id": "TK-00042",
+        "text": "Meu pedido #481516 não chegou e já passou do prazo, urgente"
+      },
+      "response": {
+        "ticket_id": "TK-00042",
+        "suggestion": "Olá! Sinto muito pelo transtorno com a entrega do seu pedido.\n\nCaso o pedido seja considerado extraviado, fazemos o reenvio sem nenhum custo adicional.\n\nSe preferir, também é possível solicitar o cancelamento com reembolso integral.\n\nJá abri uma solicitação de verificação junto à transportadora responsável pelo envio.\n\nO prazo de retorno da transportadora costuma ser de até dois dias úteis.\n\nAssim que tivermos a posição atualizada, você recebe um aviso por e-mail.\n\nReforçando o ponto 1: caso o pedido seja considerado extraviado, fazemos o reenvio sem nenhum custo adicional.\n\nReforçando o ponto 2: se preferir, também é possível solicitar o cancelamento com reembolso integral.\n\nReforçando o ponto 3: já abri uma solicitação de verificação junto à transportadora responsável pelo envio.\n\nReforçando o ponto 4: o prazo de retorno da transportadora costuma ser de até dois dias úteis.\n\nReforçando o ponto 5: assim que tivermos a posição atualizada, você recebe um aviso por e-mail.\n\nReforçando o ponto 1: caso o pedido seja considerado extraviado, fazemos o reenvio sem nenhum custo adicional.\n\nReforçando o ponto 2: se preferir, também é possível solicitar o cancelamento com reembolso integral.\n\nReforçando o ponto 3: já abri uma solicitação de verificação junto à transportadora responsável pelo envio.\n\nReforçando o ponto 4: o prazo de retorno da transportadora costuma ser de até dois dias úteis.\n\nReforçando o ponto 5: assim que tivermos a posição atualizada, você recebe um aviso por e-mail.\n\nReforçando o ponto 1: caso o pedido seja considerado extraviado, fazemos o reenvio sem nenhum custo adicional.\n\nReforçando o ponto 2: se preferir, também é possível solicitar o cancelamento com reembolso integral.\n\nReforçando o ponto 3: já abri uma solicitação de verificação junto à transportadora responsável pelo envio.\n\nReforçando o ponto 4: o prazo de retorno da transportadora costuma ser de até dois dias úteis.\n\nReforçando o ponto 5: assim que tivermos a posição atualizada, você recebe um aviso por e-mail.\n\nReforçando o ponto 1: caso o pedido seja considerado extraviado, fazemos o reenvio sem nenhum custo adicional.\n\nReforçando o ponto 2: se preferir, também é possível solicitar o cancelamento com reembolso integral.\n\nReforçando o ponto 3: já abri uma solicitação de verificação junto à transportadora responsável pelo envio.\n\nFico à disposição para qualquer outra dúvida. Um abraço, equipe de atendimento."
+      }
+    }
+  ],
+  "report": {
+    "request": {
+      "start": "2026-08-01",
+      "end": "2026-08-01"
+    },
+    "response": {
+      "start": "2026-08-01",
+      "end": "2026-08-01",
+      "total_tickets": 137,
+      "topics": [
+        {
+          "topic": "Problema no rastreio",
+          "count": 20,
+          "examples": [
+            "TK-00001",
+            "TK-00007",
+            "TK-00008"
+          ]
+        },
+        {
+          "topic": "Pedido extraviado",
+          "count": 15,
+          "examples": [
+            "TK-00005",
+            "TK-00006",
+            "TK-00009"
+          ]
+        },
+        {
+          "topic": "Troca por tamanho",
+          "count": 11,
+          "examples": [
+            "TK-00015",
+            "TK-00039",
+            "TK-00045"
+          ]
+        },
+        {
+          "topic": "Arrependimento de compra",
+          "count": 9,
+          "examples": [
+            "TK-00022",
+            "TK-00034",
+            "TK-00044"
+          ]
+        },
+        {
+          "topic": "Estorno pendente",
+          "count": 9,
+          "examples": [
+            "TK-00024",
+            "TK-00033",
+            "TK-00046"
+          ]
+        },
+        {
+          "topic": "Outros assuntos",
+          "count": 9,
+          "examples": [
+            "TK-00003",
+            "TK-00011",
+            "TK-00017"
+          ]
+        },
+        {
+          "topic": "Pix não reconhecido",
+          "count": 9,
+          "examples": [
+            "TK-00021",
+            "TK-00023",
+            "TK-00050"
+          ]
+        },
+        {
+          "topic": "Problema com boleto",
+          "count": 9,
+          "examples": [
+            "TK-00020",
+            "TK-00027",
+            "TK-00029"
+          ]
+        },
+        {
+          "topic": "Atraso na entrega",
+          "count": 8,
+          "examples": [
+            "TK-00010",
+            "TK-00025",
+            "TK-00028"
+          ]
+        },
+        {
+          "topic": "Defeito de fabricação",
+          "count": 8,
+          "examples": [
+            "TK-00035",
+            "TK-00041",
+            "TK-00071"
+          ]
+        },
+        {
+          "topic": "Produto não liga",
+          "count": 8,
+          "examples": [
+            "TK-00018",
+            "TK-00030",
+            "TK-00036"
+          ]
+        },
+        {
+          "topic": "Cobrança duplicada",
+          "count": 6,
+          "examples": [
+            "TK-00058",
+            "TK-00099",
+            "TK-00102"
+          ]
+        },
+        {
+          "topic": "Produto danificado",
+          "count": 6,
+          "examples": [
+            "TK-00002",
+            "TK-00040",
+            "TK-00048"
+          ]
+        },
+        {
+          "topic": "Acesso à conta",
+          "count": 5,
+          "examples": [
+            "TK-00012",
+            "TK-00014",
+            "TK-00072"
+          ]
+        },
+        {
+          "topic": "Cupom de desconto",
+          "count": 5,
+          "examples": [
+            "TK-00004",
+            "TK-00107",
+            "TK-00108"
+          ]
+        }
+      ]
+    }
+  }
+}
