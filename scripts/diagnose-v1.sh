@@ -10,7 +10,7 @@ TICKET='{"ticket_id": "TK-00042", "text": "Meu pedido #481516 não chegou e já 
 calls() { curl -s "$FAKE/admin/calls?last=${1:-50}" | python3 -c '
 import json, sys
 for c in reversed(json.load(sys.stdin)):
-    print(f"  {c[\"ts\"][11:23]} {c[\"provider\"]:9} {c[\"model\"]:17} {str(c[\"task\"]):8} stream={c[\"stream\"]!s:5} status={c[\"status\"]} dur_ms={c[\"duration_ms\"]}")'; }
+    print(f"  {c["ts"][11:23]} {c["provider"]:9} {c["model"]:17} {str(c["task"]):8} stream={c["stream"]!s:5} status={c["status"]} dur_ms={c["duration_ms"]}")'; }
 
 echo "== Dor 1: relatório do mês"
 curl -s -X POST $FAKE/admin/reset >/dev/null
