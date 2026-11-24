@@ -34,4 +34,15 @@ As duas últimas existem para demonstrar a recusa (roteiro de governança do REA
 
 ## Evidência
 
-Roteiro de governança do README: `/admin/calls` com 1 chamada depois da primeira requisição e continua com 1 depois da recusa por orçamento; com a chave de RPM, a 3ª requisição no mesmo minuto recebe `429` e também não chega ao provider.
+Execução do roteiro de governança do README:
+
+```
+1a: 200                      chamadas no provider: 1
+{"error":{"message":"Budget has been exceeded! Key=governance-budget-demo (sk-...0001) Current cost: 0.0001425, Max budget: 0.0001","type":"budget_exceeded",...}}
+2a: 429                      chamadas no provider: 1
+1: 200   2: 200
+{"error":{"message":"Rate limit exceeded for api_key: ... Limit type: requests. Current limit: 2, Remaining: 0 ...","type":"throttling_error",...}}
+3: 429                       chamadas no provider: 2
+```
+
+O custo medido da primeira classificação (US$ 0,0001425) bate com a conta acima.

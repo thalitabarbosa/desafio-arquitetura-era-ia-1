@@ -12,7 +12,7 @@ A aplicação do helpdesk deixou de falar com OpenAI e Anthropic. Ela pede **cap
 
 ## Diagnóstico da v1
 
-Ambiente: `git checkout v1-coupled && cp .env.example .env && docker compose up -d --build --wait`. O script [`scripts/diagnose-v1.sh`](scripts/diagnose-v1.sh) (da `main`) reproduz as dores 1 a 3 e imprime status, tempos e o `/admin/calls`. Os tempos esperados saem da tabela de latência do provider (tempo até o 1º token + tokens ÷ velocidade).
+Ambiente: `git checkout v1-coupled && cp .env.example .env && docker compose up -d --build --wait`. O script [`scripts/diagnose-v1.sh`](scripts/diagnose-v1.sh) (da `main`) reproduz as dores 1 a 3 e imprime status, tempos e o `/admin/calls`. Os números abaixo são de uma execução dele (horários do `/admin/calls` em UTC).
 
 ### Dor 1: o relatório do mês nunca chega
 
@@ -22,7 +22,16 @@ curl -s -o /dev/null -w "%{http_code} %{time_total}\n" -X POST localhost:8000/re
 curl -s "localhost:8090/admin/calls?last=50"
 ```
 
-- **Observado:** `504` da borda depois de 30 s. No `/admin/calls`, chamadas `anthropic / claude-fake-large / topics` de ~9,9 s cada, **uma depois da outra**, e elas continuam chegando nos minutos seguintes ao `504`: são 34 lotes (5.000 tickets ÷ 150), ~336 s no total, ~US$ 0,86 de tokens que ninguém vai receber.
+- **Observado:** `status=504 tempo=30.02s`. Até o `504`, o `/admin/calls` tinha 3 chamadas `anthropic claude-fake-large topics status=200` de ~9.830 ms, **uma depois da outra**, e a 4ª em andamento. 60 s depois do `504`, as chamadas continuavam chegando a cada ~9,8 s (`01:05:55`, `01:06:04`, `01:06:14` ... `01:06:53`), e ainda apareciam durante a dor 3a, minutos depois. São 34 lotes (5.000 tickets ÷ 150), ~336 s no total e ~US$ 0,86 de tokens que ninguém vai receber.
+
+```
+  01:05:25.642 anthropic claude-fake-large topics   stream=False status=200 dur_ms=9828
+  01:05:35.473 anthropic claude-fake-large topics   stream=False status=200 dur_ms=9828
+  01:05:45.304 anthropic claude-fake-large topics   stream=False status=200 dur_ms=9827
+  01:05:55.134 anthropic claude-fake-large topics   stream=False status=None dur_ms=None   <- 504 da borda aqui
+  ...
+  01:06:53.240 anthropic claude-fake-large topics   stream=False status=None dur_ms=None   <- 60 s depois, ainda gastando
+```
 - **Causa:**
   - `app/helpdesk/report.py`: o laço `for first in range(0, len(selected), config.TICKETS_PER_CALL)` chama `llm.call_anthropic(...)` lote a lote, dentro da requisição HTTP síncrona; nada é enviado à borda até o fim.
   - `edge/nginx.conf`: `proxy_read_timeout 30s` encerra a requisição; o timeout mais curto da cadeia vence.
@@ -36,7 +45,7 @@ curl -s -o /dev/null -w "%{http_code} primeiro_byte=%{time_starttransfer} total=
   -d '{"ticket_id": "TK-00042", "text": "Meu pedido #481516 não chegou e já passou do prazo, urgente"}'
 ```
 
-- **Observado:** `200` com o primeiro byte só no fim, ~16 s (0,8 s até o 1º token + 603 tokens ÷ 40 tokens/s). O `/admin/calls` mostra `claude-fake-large / suggest / stream=false`: o provider sabe fazer streaming, mas a aplicação pede tudo de uma vez.
+- **Observado:** `status=200 primeiro_byte=15.96s total=15.96s`: o primeiro byte só chega junto com o último (0,8 s até o 1º token + 603 tokens ÷ 40 tokens/s). O `/admin/calls` mostra `claude-fake-large suggest stream=False`: o provider sabe fazer streaming, mas a aplicação pede tudo de uma vez.
 - **Causa:** `app/helpdesk/llm.py` (`call_anthropic` usa `messages.create` sem `stream`) e `app/helpdesk/suggestion.py` + rota `suggest_reply` em `main.py`, que devolvem um JSON só quando o texto termina.
 
 ### Dor 3: com um provider fora ou travado, metade do helpdesk para
@@ -50,8 +59,8 @@ curl -s -X POST localhost:8090/admin/failures -H "Content-Type: application/json
 # F2 termina em 504 da borda depois de 30 s
 ```
 
-- **Observado (`error_500`):** F1 e F4 `200`; F2 e F3 `500 Internal Server Error`. Para cada requisição, o `/admin/calls` mostra **3** chamadas `anthropic ... status=500` (a original + 2 retries do SDK), sem tentativa no outro provider.
-- **Observado (`timeout`):** F2 termina em `504` da borda aos 30 s; a chamada no `/admin/calls` fica com `duration_ms: null`, e a aplicação continua esperando (o SDK aceita até 600 s e repetiria mais 2 vezes).
+- **Observado (`error_500`):** `/tickets/classification status=200 tempo=1.08s`, `/tickets/reply-suggestion status=500 tempo=1.34s`, `/tickets/extraction status=200 tempo=1.08s`. O `/admin/calls` mostra **3** chamadas `anthropic claude-fake-large suggest status=500` em ~1,3 s (a original + 2 retries do SDK), sem nenhuma tentativa na OpenAI. (As chamadas `topics status=500` intercaladas são o relatório da dor 1, que ainda estava rodando.)
+- **Observado (`timeout`):** `/tickets/reply-suggestion status=504 tempo=30.03s`; a chamada no `/admin/calls` fica com `status=504 dur_ms=None` (o provider ainda segura a conexão), e a aplicação continua esperando: o SDK aceita até 600 s e repetiria mais 2 vezes.
 - **Causa:** `app/helpdesk/config.py` amarra cada feature a um provider (`SUGGESTION_MODEL`/`REPORT_MODEL = "claude-fake-large"`, `CLASSIFICATION_MODEL`/`EXTRACTION_MODEL = "gpt-fake-large"`); `app/helpdesk/llm.py` cria os clientes sem `timeout` nem `max_retries`, valendo os padrões dos SDKs (600 s, 2 retries), e não existe fallback.
 
 ### Dor 4: trocar o modelo exige mudar código e reconstruir
@@ -230,7 +239,7 @@ curl -s -X POST localhost:8090/admin/reset
 curl -s -o /dev/null -w "1ª: %{http_code}\n" $G -H "Authorization: Bearer sk-demo-budget-0001" -H "Content-Type: application/json" -d "$BODY"
 sleep 3; count                                    # chamadas no provider: 1
 curl -s -w "\n2ª: %{http_code}\n" $G -H "Authorization: Bearer sk-demo-budget-0001" -H "Content-Type: application/json" -d "$BODY"
-count                                             # continua 1: a recusa (400, budget exceeded) não chegou ao provider
+count                                             # continua 1: a recusa (429, type budget_exceeded) não chegou ao provider
 
 # 2) Recusa por limite de requisições (rodar as 3 no mesmo minuto)
 curl -s -X POST localhost:8090/admin/reset
